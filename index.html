@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Better Map Viewer</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-omnivore/leaflet-omnivore.min.js"></script>
+    <style>
+        #map { height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        var map = L.map('map').setView([45.0, 25.0], 6); // Default center and zoom
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Load KML/KMZ file from GitHub Pages
+        var kmlLayer = omnivore.kml('https://yourusername.github.io/your-repo/yourfile.kml')
+            .on('ready', function() {
+                map.fitBounds(kmlLayer.getBounds());
+                parseKMLData(kmlLayer.toGeoJSON());
+            })
+            .addTo(map);
+        
+        function parseKMLData(data) {
+            data.features.forEach(feature => {
+                if (feature.geometry.type === "LineString") {
+                    let description = feature.properties.description || "";
+                    let type = description.match(/TYPE:\s*(\w+)/i);
+                    let allowedModes = [];
+                    
+                    if (type) {
+                        let pathType = type[1].toLowerCase();
+                        if (pathType === "bike lane") {
+                            allowedModes = ["bicycle", "walking"];
+                        } else {
+                            allowedModes = ["driving", "bicycle", "walking"];
+                        }
+                    }
+                    
+                    let polyline = L.polyline(feature.geometry.coordinates.map(coord => [coord[1], coord[0]]), {
+                        color: 'blue',
+                        weight: 4
+                    }).addTo(map);
+                    
+                    polyline.bindPopup(`Allowed Modes: ${allowedModes.join(", ")}`);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
